@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from modules.prompts import system_prompt
+from modules.call_functions import available_functions
+
 
 def main():
     parser = argparse.ArgumentParser(description="AI-Agent")
@@ -27,6 +30,7 @@ def generate_content(client, messages, args):
     response = client.models.generate_content(
         model = "gemini-2.5-flash",
         contents = messages,
+        config = types.GenerateContentConfig(tools=[available_functions], system_instruction=system_prompt, temperature=0)
     )
 
     meta_data = response.usage_metadata 
@@ -39,7 +43,13 @@ def generate_content(client, messages, args):
         print(f'Prompt tokens: {meta_data.prompt_token_count}')
         print(f'Response tokens: {meta_data.candidates_token_count}')
 
-    print(f'Response: {response.text}')
+    if not response.function_calls:
+        print("Response:")
+        print(response.text)
+        return
+
+    for function_call in response.function_calls:
+        print(f"Calling function: {function_call.name}({function_call.args})")
 
 
 if __name__ == "__main__":
